@@ -84,7 +84,7 @@ do -- player add / removing calls
     Players.PlayerRemoving:Connect(PlayerRemoving)
 end
 
-
+CommandRequestRemote.OnServerInvoke = ProcessCommand_CheckRateLimit
 
 return table.freeze({
     CommandRequestRemote = CommandRequestRemote
