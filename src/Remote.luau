@@ -1,4 +1,3 @@
-const ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Config
 const REQUEST_TIME_RECORDS_COUNT = 8 -- The record buffer size
 const EXPIRE_TIME = 10 -- Time for request count to go down
@@ -6,7 +5,7 @@ const MAX_REQUEST = 6  -- Max amount of request per EXPIRE_TIME per player
 -- Remote Instance
 const CommandRequestRemote = Instance.new("RemoteFunction")
 CommandRequestRemote.Name = "NapCommand" -- Name for localscripts to use
-CommandRequestRemote.Parent = ReplicatedStorage -- Clients can now request command execution
+CommandRequestRemote.Parent = require("./SharedFolder") -- Clients can now request command execution
 
 const RequestTimeRecords: {[Player]: buffer?} = {} -- Value is the u32 (time in seconds when request was arrived)
 
