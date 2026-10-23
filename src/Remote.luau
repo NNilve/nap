@@ -1,8 +1,8 @@
 const ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Config
-const REQUEST_TIME_RECORDS_COUNT = 8
-const EXPIRE_TIME = 10
-const MAX_REQUEST = 6
+const REQUEST_TIME_RECORDS_COUNT = 8 -- The record buffer size
+const EXPIRE_TIME = 10 -- Time for request count to go down
+const MAX_REQUEST = 6  -- Max amount of request per EXPIRE_TIME per player
 -- Remote Instance
 const CommandRequestRemote = Instance.new("RemoteFunction")
 CommandRequestRemote.Name = "NapCommand" -- Name for localscripts to use
@@ -13,7 +13,7 @@ const RequestTimeRecords: {[Player]: buffer?} = {} -- Value is the u32 (time in 
 -- Since ProcessCommand_CheckRateLimit is called before this function,
 -- even if exploiters fire remote rapidly, @native has no effect
 const function ProcessCommand_WriteRequestRecord(player, ...)
-    const buf: buffer? = RequestTimeRecords[player] -- record of 
+    const buf: buffer? = RequestTimeRecords[player] -- record of player
     if not buf then -- somehow PlayerAdded is not ran yet for this player
         warn("RequestTimeRecord buffer not found in table") -- report error
         return nil, "Server side error!" -- the result to client
@@ -37,9 +37,9 @@ end
 
 @native
 -- Exploiters can fire this rapidly and lag the server
--- so using native saves resources dealing
+-- so using native saves resources dealing with it
 const function ProcessCommand_CheckRateLimit(player, ...)
-    const buf = RequestTimeRecords[player] -- record of player
+    const buf = RequestTimeRecords[player] -- record of player. Can read, but not write
     if not buf then -- somehow PlayerAdded is not ran yet for this player
         warn("RequestTimeRecord buffer not found in table") -- report error
         return nil, "Server side error!" -- the result to client
