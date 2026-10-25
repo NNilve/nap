@@ -1,13 +1,16 @@
 {
-    "name": "nap",
-    "tree": {
-        "Workspace": {            
-            "$className": "Folder"
-        }
+  "name": "nap",
+  "tree": {
+    "$className": "DataModel",
+    "Workspace": {
+      "Baseplate": {
+        "$path": "preview/baseplate.rbxm"
+      }
     },
     "ServerScriptService": {
-        "Nap": {
-            "$path": "src"
-        }
+      "nap": {
+        "$path": "src"
+      }
     }
+  }
 }
