@@ -10,11 +10,107 @@ CommandRequestRemote.Parent = ReplicatedStorage -- Clients can now request comma
 
 const RequestTimeRecords: {[Player]: buffer?} = {} -- Value is the u32 (time in seconds when request was arrived)
 
+-- Returns s if condition is true, Empty string if condition is false
+-- Primarily used for plurals
+const function putif(condition: boolean, s: string): string
+    if condition then
+        return s
+    end
+    return ""
+end
+
 const Commands = {
-    Killall = {
+    kill = {
+        -- Varargs of usernames, kills everyone if not provided 
         RequiredGroupRole = {"CanKillAll"},
-        Run = function()
-            workspace:QueryDescendants("")
+        Run = function(...)
+            const Players = game:GetService("Players")
+            const killedPlayerNames = {}
+            const killFailedPlayerNames = {}
+            const function shouldKillPlayer(player: Player, ...): boolean
+                const varargc = select("#", ...)
+                if varargc == 0 then -- no params: kill everyone
+                    return true -- yes, you should kill it
+                end
+                for i = 1, varargc do -- go and iterate over vararg
+                    const username = select(i, ...) -- 
+                    if player.Name == username then -- username found
+                        return true -- yes, it's requested to kill username
+                    end
+                end
+                return false -- no, you shouldn't
+            end
+            -- returns nil if players are killec
+            -- returns string with reason if failed to kill player
+            const function killPlayer(player: Player): string?
+                const character = player.Character -- player's character    
+                if not character then -- no player character 
+                    return "no character found"
+                end
+
+                const humanoid = character:FindFirstChildOfClass("Humanoid") -- humanoid that has health prop
+                if not humanoid then -- for type safety
+                    return "no humanoid found"
+                end
+
+                if humanoid.Health == 0 then
+                    return "already dead"
+                end
+
+                humanoid.Health = 0 -- kills character
+                return nil
+            end
+
+            const argc = select("#", ...)
+            const p = Players:GetPlayers()
+            if argc == 0 then
+                -- todo
+            end
+            for i = 1, argc do
+                const name = select(i, ...)
+                for _, player in p do
+                    if player.Name == name then
+                        const err = killPlayer(player)
+                        if err then
+                            const msg = `{player.DisplayName} (@{player.Name}) - {err}`
+                            table.insert(killFailedPlayerNames, msg)
+                        else
+                            table.insert(killedPlayerNames, `{player.DisplayName} (@{player.Name})`)
+                        end
+                        continue
+                    end
+                end
+            end
+            --[[
+            for _, player in Players:GetPlayers() do -- loop over all players
+                if not shouldKillPlayer(player, ...) then
+                    continue
+                end
+
+                const playerName = string.format("%s (%s)", player.DisplayName, player.Name)
+                
+                
+                table.insert(killedPlayerNames, playerName)
+            end]]
+
+            return `{ -- return format string (i know it's a bit complicated, sorry)
+                if #killedPlayerNames > 0 then -- killed at least one player
+                    `Killed player{putif(#killedPlayerNames > 1, "s")}: {
+                        table.concat(killedPlayerNames) -- list of all players killed
+                    }`  
+                else -- killed 0 player
+                    "No players killed" -- message that not players killed
+            }{ -- and next player
+                if #killFailedPlayerNames > 0 then -- some players requested have failed to kill
+                    `\nFailed to kill player{putif(#killFailedPlayerNames > 1, "s")}: {table.concat(killFailedPlayerNames)}`  
+                else -- all requested players successfully killed
+                    "" -- do not add more message
+            }`
+
+            
+
+            
+
         end
     }
 }
