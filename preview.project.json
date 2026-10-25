@@ -1,0 +1,13 @@
+{
+    "name": "nap",
+    "tree": {
+        "Workspace": {            
+            "$className": "Folder"
+        }
+    },
+    "ServerScriptService": {
+        "Nap": {
+            "$path": "src"
+        }
+    }
+}
