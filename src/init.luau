@@ -22,24 +22,12 @@ end
 const Commands = {
     kill = {
         -- Varargs of usernames, kills everyone if not provided 
-        RequiredGroupRole = {"CanKillAll"},
+    RequiredGroupRole = {"CanKill"},
         Run = function(...)
             const Players = game:GetService("Players")
             const killedPlayerNames = {}
             const killFailedPlayerNames = {}
-            const function shouldKillPlayer(player: Player, ...): boolean
-                const varargc = select("#", ...)
-                if varargc == 0 then -- no params: kill everyone
-                    return true -- yes, you should kill it
-                end
-                for i = 1, varargc do -- go and iterate over vararg
-                    const username = select(i, ...) -- 
-                    if player.Name == username then -- username found
-                        return true -- yes, it's requested to kill username
-                    end
-                end
-                return false -- no, you shouldn't
-            end
+
             -- returns nil if players are killec
             -- returns string with reason if failed to kill player
             const function killPlayer(player: Player): string?
@@ -60,39 +48,41 @@ const Commands = {
                 humanoid.Health = 0 -- kills character
                 return nil
             end
+            --[[
+                call killPlayer() and add report to concat table
+            ]]
+            const function tryKillPlayer(player: Player)
+                const err = killPlayer(player) -- returns string if errored
+                if err then -- an error!
+                    table.insert(killFailedPlayerNames, `{player.DisplayName} (@{player.Name}): {err}`) -- add err message to concat table
+                else
+                    table.insert(killedPlayerNames, `{player.DisplayName} (@{player.Name})`) -- add success player to concat table
+                end
+            end
 
             const argc = select("#", ...)
             const p = Players:GetPlayers()
-            if argc == 0 then
-                -- todo
-            end
-            for i = 1, argc do
-                const name = select(i, ...)
-                for _, player in p do
-                    if player.Name == name then
-                        const err = killPlayer(player)
-                        if err then
-                            const msg = `{player.DisplayName} (@{player.Name}) - {err}`
-                            table.insert(killFailedPlayerNames, msg)
-                        else
-                            table.insert(killedPlayerNames, `{player.DisplayName} (@{player.Name})`)
+            if argc == 0 then -- no args, kill all
+                for _, player in p do -- all players
+                    tryKillPlayer(player)
+                end
+            else -- args, kill players specified in arg
+                for i = 1, argc do -- arg.
+                    const name = select(i, ...) -- get the i-th parameter
+                    local match = false -- will be true when player with that name is found
+                    for _, player in p do -- all players
+                        if string.lower(player.Name) == string.lower(name) then -- found the requested player!
+                            match = true -- means do not report no player found error.
+                            tryKillPlayer(player)
+                            break -- player already found; no need to iterate again
                         end
-                        continue
+                    end
+                    if not match then -- no player found in the request; report no player found error
+                        table.insert(killFailedPlayerNames, `{name}: not found`)
                     end
                 end
             end
-            --[[
-            for _, player in Players:GetPlayers() do -- loop over all players
-                if not shouldKillPlayer(player, ...) then
-                    continue
-                end
-
-                const playerName = string.format("%s (%s)", player.DisplayName, player.Name)
-                
-                
-                table.insert(killedPlayerNames, playerName)
-            end]]
-
+            
             return `{ -- return format string (i know it's a bit complicated, sorry)
                 if #killedPlayerNames > 0 then -- killed at least one player
                     `Killed player{putif(#killedPlayerNames > 1, "s")}: {
@@ -106,11 +96,6 @@ const Commands = {
                 else -- all requested players successfully killed
                     "" -- do not add more message
             }`
-
-            
-
-            
-
         end
     }
 }
