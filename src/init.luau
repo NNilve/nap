@@ -10,6 +10,18 @@ CommandRequestRemote.Parent = ReplicatedStorage -- Clients can now request comma
 
 const RequestTimeRecords: {[Player]: buffer?} = {} -- Value is the u32 (time in seconds when request was arrived)
 
+const Commands = {
+    Killall = {
+        RequiredGroupRole = {"CanKillAll"},
+        Run = function()
+            workspace:QueryDescendants("")
+        end
+    }
+}
+
+const function ProcessCommand_GetCommandType()
+end
+
 -- Since ProcessCommand_CheckRateLimit is called before this function,
 -- even if exploiters fire remote rapidly, @native has no effect
 const function ProcessCommand_WriteRequestRecord(player, ...)
