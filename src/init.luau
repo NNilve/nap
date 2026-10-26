@@ -19,11 +19,14 @@ const function putif(condition: boolean, s: string): string
     return ""
 end
 
-const Commands = {
+const Commands: {[string]: {
+    RequiredGroupRole: {string},
+    Run: (Player, ...any) -> string
+}} = {
     kill = {
         -- Varargs of usernames, kills everyone if not provided 
     RequiredGroupRole = {"CanKill"},
-        Run = function(...)
+        Run = function(playerWhoRanCommand: Player, ...)
             const Players = game:GetService("Players")
             const killedPlayerNames = {}
             const killFailedPlayerNames = {}
