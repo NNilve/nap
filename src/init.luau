@@ -18,11 +18,11 @@ const function putif(condition: boolean, s: string): string
     end
     return ""
 end
-
-const Commands: {[string]: {
+type CmdData = {
     RequiredGroupRole: {string},
     Run: (Player, ...any) -> string
-}} = {
+}
+const Commands: {[string]: CmdData} = {
     kill = {
         -- Varargs of usernames, kills everyone if not provided 
     RequiredGroupRole = {"CanKill"},
