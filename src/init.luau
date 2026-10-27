@@ -1,4 +1,7 @@
 const ReplicatedStorage = game:GetService("ReplicatedStorage")
+const DataStoreService = game:GetService("DataStoreService")
+
+const NapLogDataStore = DataStoreService:GetDataStore("NapLog")
 -- Config
 const REQUEST_TIME_RECORDS_COUNT = 8 -- The record buffer size
 const EXPIRE_TIME = 10 -- Time for request count to go down
@@ -18,12 +21,15 @@ const function putif(condition: boolean, s: string): string
     end
     return ""
 end
-
-const Commands = {
+type CmdData = {
+    RequiredGroupRole: {string},
+    Run: (Player, ...any) -> string
+}
+const Commands: {[string]: CmdData} = {
     kill = {
         -- Varargs of usernames, kills everyone if not provided 
     RequiredGroupRole = {"CanKill"},
-        Run = function(...)
+        Run = function(playerWhoRanCommand: Player, ...)
             const Players = game:GetService("Players")
             const killedPlayerNames = {}
             const killFailedPlayerNames = {}
@@ -100,7 +106,40 @@ const Commands = {
     }
 }
 
-const function ProcessCommand_GetCommandType()
+const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
+    if cmdData.Yields then -- cannot be executed in UpdateAsync callback
+    end--todo
+
+    const function Update(value, keyInfo: DataStoreKeyInfo)
+        local updateType = nil
+        if value == nil then -- new value! Create
+            value = {
+                Logs = {}
+            }
+            table.insert(value.Logs, {t = time()})
+        end
+        return {player.UserId}, {UpdateType = updateType}
+    end
+    const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, Update)
+end
+
+const function ProcessCommand_CheckPermission(player: Player, cmdData: CmdData, ...)
+    -- no permission checks yet.
+    return ProcessCommand_LogUpdate(player, cmdData, ...)
+end
+
+const function ProcessCommand_GetCommandType(player: Player, cmd: string, ...)
+    if cmd == nil then
+        return nil, 'expected a command!'
+    end
+    if type(cmd) ~= 'string' then
+        return nil, `expected a string command, got {typeof(cmd)}`
+    end
+    const commandData = Commands[cmd]
+    if commandData then
+        return ProcessCommand_CheckPermission(player, commandData, ...)
+    end
+    return nil, `unknown commnad '{cmd}'`
 end
 
 -- Since ProcessCommand_CheckRateLimit is called before this function,
