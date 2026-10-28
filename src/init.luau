@@ -107,6 +107,26 @@ const Commands: {[string]: CmdData} = {
     }
 }
 
+
+const function deepcopy<T>(t: T): T
+    if type(t) ~= 'table' then
+        return t
+    end
+    const function clone<U>(t: U, visited: {[{[any]: any}]: true?}): U
+        if type(t) ~= 'table' or visited[t] then
+            return t 
+        end
+        visited[t] = true
+
+        const new: any = {}
+        for k, v in pairs(t) do
+            new[clone(k, visited)] = clone(v, visited)
+        end
+        return new
+    end
+    return clone(t, {})
+end
+
 const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
     if cmdData.Yields then -- cannot be executed in UpdateAsync callback
     end--todo
