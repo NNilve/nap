@@ -23,7 +23,8 @@ const function putif(condition: boolean, s: string): string
 end
 type CmdData = {
     RequiredGroupRole: {string},
-    Run: (Player, ...any) -> string
+    Run: (Player, ...any) -> string,
+    Yields: boolean?
 }
 const Commands: {[string]: CmdData} = {
     kill = {
