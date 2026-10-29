@@ -23,7 +23,8 @@ const function putif(condition: boolean, s: string): string
 end
 type CmdData = {
     RequiredGroupRole: {string},
-    Run: (Player, ...any) -> string
+    Run: (Player, ...any) -> string,
+    Yields: boolean?
 }
 const Commands: {[string]: CmdData} = {
     kill = {
@@ -106,21 +107,56 @@ const Commands: {[string]: CmdData} = {
     }
 }
 
-const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
-    if cmdData.Yields then -- cannot be executed in UpdateAsync callback
-    end--todo
 
-    const function Update(value, keyInfo: DataStoreKeyInfo)
-        local updateType = nil
-        if value == nil then -- new value! Create
-            value = {
-                Logs = {}
-            }
-            table.insert(value.Logs, {t = time()})
-        end
-        return {player.UserId}, {UpdateType = updateType}
+const function deepcopy<T>(t: T): T
+    if type(t) ~= 'table' then
+        return t
     end
-    const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, Update)
+    const function clone<U>(t: U, visited: {[{[any]: any}]: true?}): U
+        if type(t) ~= 'table' or visited[t] then
+            return t 
+        end
+        visited[t] = true
+
+        const new: any = {}
+        for k, v in pairs(t) do
+            new[clone(k, visited)] = clone(v, visited)
+        end
+        return new
+    end
+    return clone(t, {})
+end
+
+const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
+    const function typeData(data: any): (
+        {Logs: {any}}, -- The typed, valid value
+        {[string]: any} -- Roblox metadata contains information of data's schema change
+    )
+        const robloxMetadata = {}
+        if typeof(data) ~= "table" then
+            if data ~= nil then -- data is corrupted
+                robloxMetadata.UpdateType = "CorruptionReset" -- add report to metadata
+            else -- data is newly created
+                robloxMetadata.UpdateType = "Initialize"
+            end
+            return { -- return new table, since prev data is not table
+                Logs = {}
+            }, robloxMetadata
+        end
+        const dataClone = deepcopy(data)
+        if typeof(dataClone.Logs) ~= "table" then
+            robloxMetadata.LogsTypeError = "expected table, got "..typeof(dataClone.Logs)
+            dataClone.Logs = {}
+        end 
+        return dataClone, robloxMetadata
+    end
+    if cmdData.Yields then -- cannot be executed in UpdateAsync callback
+        const id = os.
+        const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
+            const value, metadata = typeData(oldValue)
+            --todo
+        end)
+    end
 end
 
 const function ProcessCommand_CheckPermission(player: Player, cmdData: CmdData, ...)
