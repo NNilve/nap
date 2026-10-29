@@ -128,20 +128,35 @@ const function deepcopy<T>(t: T): T
 end
 
 const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
-    if cmdData.Yields then -- cannot be executed in UpdateAsync callback
-    end--todo
-
-    const function Update(value, keyInfo: DataStoreKeyInfo)
-        local updateType = nil
-        if value == nil then -- new value! Create
-            value = {
+    const function typeData(data: any): (
+        {Logs: {any}}, -- The typed, valid value
+        {[string]: any} -- Roblox metadata contains information of data's schema change
+    )
+        const robloxMetadata = {}
+        if typeof(data) ~= "table" then
+            if data ~= nil then -- data is corrupted
+                robloxMetadata.UpdateType = "CorruptionReset" -- add report to metadata
+            else -- data is newly created
+                robloxMetadata.UpdateType = "Initialize"
+            end
+            return { -- return new table, since prev data is not table
                 Logs = {}
-            }
-            table.insert(value.Logs, {t = time()})
+            }, robloxMetadata
         end
-        return {player.UserId}, {UpdateType = updateType}
+        const dataClone = deepcopy(data)
+        if typeof(dataClone.Logs) ~= "table" then
+            robloxMetadata.LogsTypeError = "expected table, got "..typeof(dataClone.Logs)
+            dataClone.Logs = {}
+        end 
+        return dataClone, robloxMetadata
     end
-    const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, Update)
+    if cmdData.Yields then -- cannot be executed in UpdateAsync callback
+        const id = os.
+        const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
+            const value, metadata = typeData(oldValue)
+            --todo
+        end)
+    end
 end
 
 const function ProcessCommand_CheckPermission(player: Player, cmdData: CmdData, ...)
