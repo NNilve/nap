@@ -207,12 +207,13 @@ const function ProcessCommand_LogUpdate(player: Player, cmdName: string, ...)
     end
 end
 
-const function ProcessCommand_CheckPermission(player: Player, cmdData: CmdData, ...)
+const function ProcessCommand_CheckPermission(player: Player, cmdName: string, ...)
+    const cmdData = assert(Commands[cmdName], "undefined command")
     -- no permission checks yet.
     return ProcessCommand_LogUpdate(player, cmdData, ...)
 end
 
-const function ProcessCommand_GetCommandType(player: Player, cmd: string, ...)
+const function ProcessCommand_ValidateCommandType(player: Player, cmd: string, ...)
     if cmd == nil then
         return nil, 'expected a command!'
     end
@@ -221,7 +222,7 @@ const function ProcessCommand_GetCommandType(player: Player, cmd: string, ...)
     end
     const commandData = Commands[cmd]
     if commandData then
-        return ProcessCommand_CheckPermission(player, commandData, ...)
+        return ProcessCommand_CheckPermission(player, cmd, ...)
     end
     return nil, `unknown commnad '{cmd}'`
 end
