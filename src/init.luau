@@ -128,6 +128,22 @@ const function deepcopy<T>(t: T): T
 end
 
 const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
+    -- uses 3 params (length of log, current time, server job id)
+    const function generateID(logLen: number): string
+        const EncodingService = game:GetService("EncodingService")
+        const now = DateTime.now().UnixTimestampMillis -- f64 (but it's actually u52), too large to fit in u32
+        const jobId = game.JobId -- unique per server
+
+        const buf = buffer.create(8 + 4 + #jobId) -- size of time + log length + jobId
+        buffer.writef64(buf, 0, now) -- should use writef64 because there's no 64 bit luau integer
+        buffer.writeu32(buf, 8, logLen) 
+        buffer.writestring(buf, 12, jobId)
+
+        return buffer.tostring(EncodingService:Base64Encode( -- convert to human readable string
+            EncodingService:ComputeBufferHash(buf,Enum.HashAlgorithm.Blake3) -- convert to random characters
+        ))
+
+    end
     const function typeData(data: any): (
         {Logs: {any}}, -- The typed, valid value
         {[string]: any} -- Roblox metadata contains information of data's schema change
