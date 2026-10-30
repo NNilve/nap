@@ -129,9 +129,9 @@ end
 
 const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
     -- uses 3 params (length of log, current time, server job id)
-    const function generateID(logLen: number): string
+    const function generateID(logLen: number, time: DateTime): string
         const EncodingService = game:GetService("EncodingService")
-        const now = DateTime.now().UnixTimestampMillis -- f64 (but it's actually u52), too large to fit in u32
+        const now = time.UnixTimestampMillis -- f64 (but it's actually u52), too large to fit in u32
         const jobId = game.JobId -- unique per server
 
         const buf = buffer.create(8 + 4 + #jobId) -- size of time + log length + jobId
