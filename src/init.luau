@@ -127,7 +127,7 @@ const function deepcopy<T>(t: T): T
     return clone(t, {})
 end
 
-const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
+const function ProcessCommand_LogUpdate(player: Player, cmdName: string, ...)
     -- uses 3 params (length of log, current time, server job id)
     const function generateID(logLen: number, time: DateTime): string
         const EncodingService = game:GetService("EncodingService")
@@ -166,11 +166,43 @@ const function ProcessCommand_LogUpdate(player: Player, cmdData: CmdData, ...)
         end 
         return dataClone, robloxMetadata
     end
+    const params = table.pack(...)
+    const cmdData = assert(Commands[cmdName], "undefined command") -- always return command data
     if cmdData.Yields then -- cannot be executed in UpdateAsync callback
-        const id = os.
+        local id = "No ID" -- must be generated based on time, length of logs
         const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
             const value, metadata = typeData(oldValue)
-            --todo
+            const calltime = DateTime.now()
+            id = generateID(#value.Logs, calltime) -- generate unique id
+
+            table.insert(value.Logs, {
+                Id = id,
+                Time = calltime,
+                Command = cmdName,
+                Params = params
+            })
+        end)
+        if not ok then
+            return "todo: error return"--
+        end
+    else
+        const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
+            const value, metadata = typeData(oldValue)
+            const calltime = DateTime.now()
+            const id = generateID(#value.Logs, calltime) -- generate unique id
+
+            const ok, result = pcall(cmdData.Run, player, table.unpack(params)) -- protected call inside oldValue
+            const Log = {
+                Id = id,
+                Time = calltime,
+                Command = cmdName,
+                Params = params,
+            }
+            if ok then
+                Log.Result = result
+            else
+                Log.Error = result
+            end
         end)
     end
 end
