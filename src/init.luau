@@ -29,7 +29,7 @@ type CmdData = {
 const Commands: {[string]: CmdData} = {
     kill = {
         -- Varargs of usernames, kills everyone if not provided 
-    RequiredGroupRole = {"CanKill"},
+        RequiredGroupRole = {"CanKill"},
         Run = function(playerWhoRanCommand: Player, ...)
             const Players = game:GetService("Players")
             const killedPlayerNames = {}
