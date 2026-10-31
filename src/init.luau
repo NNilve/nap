@@ -169,41 +169,132 @@ const function ProcessCommand_LogUpdate(player: Player, cmdName: string, ...)
     const params = table.pack(...)
     const cmdData = assert(Commands[cmdName], "undefined command") -- always return command data
     if cmdData.Yields then -- cannot be executed in UpdateAsync callback
-        local id = "No ID" -- must be generated based on time, length of logs
-        const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
+        local id = "No ID" -- will be generated when logging command start
+        const calltime = DateTime.now() -- when execution started
+        -- Log command start
+        const startUpdateOk, startUpdateErr = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
             const value, metadata = typeData(oldValue)
-            const calltime = DateTime.now()
-            id = generateID(#value.Logs, calltime) -- generate unique id
-
-            table.insert(value.Logs, {
+            id = generateID(#value.Logs, calltime) -- generate unique id representing command execution
+            table.insert(value.Logs, { -- add log
                 Id = id,
                 Time = calltime,
                 Command = cmdName,
-                Params = params
+                Params = params 
             })
+
+            return value, {player.UserId}, metadata -- the new value, runner's user domain id, metadata
         end)
-        if not ok then
-            return "todo: error return"--
+        if not startUpdateOk then -- command start log fail; cannot run command
+            return { -- early return report
+                CmdErr = "CmdStartUpdateAsyncError",
+                StartUpdateAsyncError = startUpdateErr,
+            }, "Error while logging command start"
         end
+        -- Run the command.
+        const cmdOk, cmdResult = pcall(cmdData.Run, player, ...) -- protected call command
+        -- Log after running the command
+        const resultUpdateOk, resultUpdateErr = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
+            const value, metadata = typeData(oldValue) -- to get valid type. metadata stores previous data error
+            const calltime = DateTime.now()
+
+            local log = {
+                Id = id,
+                Time = calltime,
+                Ok = cmdOk
+            }
+            if cmdOk then
+                log.Result = cmdResult
+            else
+                log.Error = cmdResult
+            end
+
+            table.insert(value.Logs, log)
+            return value, {player.UserId}, metadata
+        end)
+
+        -- Write report
+        const report = {} -- 1st return
+        local message = nil -- 2nd return
+        if not resultUpdateOk then -- write result logging error information
+            report.ResultUpdateAsyncError = resultUpdateErr
+        end
+        if cmdOk then -- Command execution no error
+            report.CmdResult = cmdResult -- add success result
+            if resultUpdateOk then -- All Good
+                message = nil
+            else -- Command success, result log failure
+                message = "Failed to log command. No worry, command was successful"
+            end
+        else -- command errored
+            report.CmdError = cmdResult -- add error message 
+            if resultUpdateOk then -- Command fail, result log success
+                message = "The command errored!"
+            else -- Command and result log fail
+                message = "The command errored, and Failed to log command!"
+            end
+        end
+        return report, message
     else
-        const ok, i = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
+        -- will be written after executing command 
+        local cmdOk = false -- didn't command errored
+        local cmdOkResult = nil
+        local cmdErr = nil
+
+        const logOk, logErr = pcall(NapLogDataStore.UpdateAsync, NapLogDataStore, player.User.DomainId, function(oldValue)
             const value, metadata = typeData(oldValue)
             const calltime = DateTime.now()
             const id = generateID(#value.Logs, calltime) -- generate unique id
-
+            -- Run the command
             const ok, result = pcall(cmdData.Run, player, table.unpack(params)) -- protected call inside oldValue
-            const Log = {
+            -- Log the result
+            const Log = { -- log base
                 Id = id,
                 Time = calltime,
                 Command = cmdName,
                 Params = params,
             }
-            if ok then
+            if ok then -- no command error
                 Log.Result = result
-            else
+                cmdOk = true
+                cmdOkResult = cmdOkResult
+            else -- command error
                 Log.Error = result
+                cmdErr = result
             end
+
+            return value, {player.UserId}, metadata -- newly updated data
         end)
+        -- Write report
+        const report = {} -- 1st return
+        local message = nil -- 2nd return
+        if not logOk then -- write command logging error information
+            report.LogError = logErr
+        end
+        if cmdOk then -- Command execution no error
+            report.CmdResult = cmdOkResult
+            if logOk then -- All Good
+                message = nil 
+            else -- Command success, result log failure
+                message = "Failed to log command. No worry, command was successful"
+            end
+        else -- command errored
+            if cmdErr == nil then -- command function didn't run
+                if logOk then -- unexpected condition
+                    message = "Didn't run command"
+                    warn("Command didn't run while command log is ok") 
+                else -- Command and result log fail
+                    message = "Didn't run command because command log failure"
+                end
+            else -- some command error value 
+                report.CmdError = cmdErr -- add error message 
+                if logOk then -- Command fail, result log success
+                    message = "Command errored"
+                else -- Command and result log fail
+                    message = "The command errored, and Failed to log command!"
+                end
+            end
+        end
+        return report, message
     end
 end
 
@@ -249,7 +340,7 @@ const function ProcessCommand_WriteRequestRecord(player, ...)
     buffer.writeu32(buf, offsetToWriteTime, current)
 
     -- TODO: Implement the next step: check the permission
-    return nil, "todo: run callback"
+    return ProcessCommand_ValidateCommandType(player, ...)
 end
 
 @native
