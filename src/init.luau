@@ -104,6 +104,13 @@ const Commands: {[string]: CmdData} = {
                     "" -- do not add more message
             }`
         end
+    },
+    print = {
+        RequiredGroupRole = {},
+        Run = function(_: Player, ...)
+            print(...)
+            return "printed"
+        end
     }
 }
 
