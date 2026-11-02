@@ -11,6 +11,14 @@
       "nap": {
         "$path": "src"
       }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "nap-client": {
+          "$path": "src-client"
+        }
+      }
     }
   }
 }
