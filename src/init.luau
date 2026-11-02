@@ -307,8 +307,38 @@ end
 
 const function ProcessCommand_CheckPermission(player: Player, cmdName: string, ...)
     const cmdData = assert(Commands[cmdName], "undefined command")
-    -- no permission checks yet.
-    return ProcessCommand_LogUpdate(player, cmdData, ...)
+    if #cmdData.RequiredGroupRole == 0 then -- no need checking, anyone can use command
+        return ProcessCommand_LogUpdate(player, cmdName, ...) -- proceed to next step
+    end
+    if game.CreatorType == Enum.CreatorType.User then -- user-owned game: all 
+        if player.UserId == game.CreatorId then
+            return ProcessCommand_LogUpdate(player, cmdName, ...)
+        else
+            return nil, "Only owner can execute this command"
+        end
+    end
+    const GroupService = game:GetService("GroupService")
+    const ok, rolesOrErr = pcall(GroupService.GetRolesInGroupAsync, GroupService, player.User, game.CreatorId)
+    if not ok then -- Roblox API error
+        warn(rolesOrErr)
+        return nil, "Permission check failure"
+    end
+
+    for _, requiredRole in pairs(cmdData.RequiredGroupRole) do -- loop over required group role
+        local foundRole = false -- returns 
+        for _, role in ipairs(rolesOrErr.Roles) do -- loop over player's role
+            if string.lower(role.Name) == string.lower(requiredRole) then -- role name match (case insensitive) 
+                foundRole = true -- found role, signal outside
+                break -- signal outside, can already progress
+            end
+        end
+        if not foundRole then -- missing required group role
+            return nil, "No permission" -- immediately reject
+        end
+    end
+
+    return ProcessCommand_LogUpdate(player, cmdName, ...) -- proceed
+    
 end
 
 const function ProcessCommand_ValidateCommandType(player: Player, cmd: string, ...)
