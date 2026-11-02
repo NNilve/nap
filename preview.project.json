@@ -10,13 +10,25 @@
     "ServerScriptService": {
       "nap": {
         "$path": "src"
-      }
+      },
+      "nap-boot": {
+        "$className": "Script",
+        "$properties": {
+          "Source": "require('./nap')"
+        }
+      }      
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
         "nap-client": {
           "$path": "src-client"
+        },
+        "nap-client-boot": {
+          "$className": "LocalScript",
+          "$properties": {
+            "Source": "if script:FindFirstAncestorOfClass('Player') then require('./nap-client') end"
+          }
         }
       }
     }
