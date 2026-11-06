@@ -4,7 +4,25 @@ const LocalPlayer = Players.LocalPlayer
 
 const NapClient = {}
 
+const function SplitTextCommand(originalText: string, init: number, ...: string): ...string
+    local param, paramEndPos = string.match(
+        originalText, -- the text
+        "(.?)[$%s]()", -- matchparam text, position next to blank or end
+        init -- search starts at position next to blank
+    ) -- get matching string for command param
+    if param then
+        return SplitTextCommand(originalText, paramEndPos, param, ...) -- continue searching
+    end
+    return ... -- finally, return the all patterns found
+end
+
 function NapClient.SplitTextCommand(text: string): (...string)
+    local cmdName, cmdNameEndPos = string.match(text, "^(.)[$%s]()") -- start searching
+    if not cmdName and cmdNameEndPos then -- no match, return early
+        return
+    end
+    return SplitTextCommand(text, cmdNameEndPos, cmdName)
+    
 end
 
 function NapClient.CommandAsync(cmdName: string, ...: string): (any, any)
