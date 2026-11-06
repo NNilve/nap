@@ -19,7 +19,7 @@ end
 function NapClient.SplitTextCommand(text: string): (...string)
     local cmdName, cmdNameEndPos = string.match(text, "^(.)[$%s]()") -- start searching
     if not cmdName and cmdNameEndPos then -- no match, return early
-        return
+        return -- nothing (0 parameters)
     end
     return SplitTextCommand(text, cmdNameEndPos, cmdName) -- continue searching at next to blank
     
@@ -33,7 +33,11 @@ function NapClient.CommandAsync(cmdName: string, ...: string): (any, any)
     if not remoteFn:IsA("RemoteFunction") then -- type error
         return nil, "NapCommand instance expected RemoteFunction, got " .. remoteFn.ClassName
     end
-    const ok, result, message = pcall(remoteFn.InvokeServer, remoteFn, cmdName, ...)
+    const 
+        ok, -- if the function is errored at server
+        result, -- if ok: report or nil (if server rejected), otherwise: error message
+        message -- the server's second return string
+        = pcall(remoteFn.InvokeServer, remoteFn, cmdName, ...)
     if not ok then
         return nil, "server command error / "..tostring(result)
     end
